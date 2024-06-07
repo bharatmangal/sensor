@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Accelerometer Data</title>
+  <title>Sensor Data</title>
   <style>
-    #accelerometer-data {
+    #sensor-data {
       position: absolute;
       top: 10%;
       left: 10%;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       color: #333;
     }
@@ -29,48 +29,64 @@
   </style>
 </head>
 <body>
-  <div id="accelerometer-data"></div>
+  <div id="sensor-data"></div>
   <button id="download" onclick="downloadCSV()">Download Data</button>
   <script>
-    // Check if the device has an accelerometer
-    if (window.DeviceMotionEvent == undefined) {
-      alert("No accelerometer available.");
+    if (window.DeviceMotionEvent === undefined || window.DeviceOrientationEvent === undefined) {
+      alert("Necessary sensors not available.");
     } else {
-      alert("Accelerometer found.");
-      window.addEventListener("devicemotion", accelerometerUpdate, true);
+      window.addEventListener("devicemotion", motionUpdate, true);
+      window.addEventListener("deviceorientation", orientationUpdate, true);
+      alert("Sensors found.");
     }
 
-    var dataCSV = "Time,Acceleration X,Acceleration Y,Acceleration Z,Distance\n";
+    var dataCSV = "Time,Accel X,Accel Y,Accel Z,Distance,Quat W,Quat X,Quat Y,Quat Z\n";
     var lastTime = performance.now();
     var totalDistance = 0;
+    var quaternion = { w: 1, x: 0, y: 0, z: 0 };
 
-    function accelerometerUpdate(event) {
-      try {
-        var currentTime = performance.now();
-        var dt = (currentTime - lastTime) / 1000;
+    function motionUpdate(event) {
+      var currentTime = performance.now();
+      var dt = (currentTime - lastTime) / 1000;
 
-        var aX = event.accelerationIncludingGravity.x * 1;
-        var aY = event.accelerationIncludingGravity.y * 1;
-        var aZ = event.accelerationIncludingGravity.z * 1;
+      var aX = event.accelerationIncludingGravity.x * 1;
+      var aY = event.accelerationIncludingGravity.y * 1;
+      var aZ = event.accelerationIncludingGravity.z * 1;
 
-        aX = filterData(aX);
-        aY = filterData(aY);
-        aZ = filterData(aZ);
+      aX = filterData(aX);
+      aY = filterData(aY);
+      aZ = filterData(aZ);
 
-        var distanceX = (aX / 6) * Math.pow(dt, 3);
-        var distanceY = (aY / 6) * Math.pow(dt, 3);
-        var distanceZ = (aZ / 6) * Math.pow(dt, 3);
-        totalDistance += Math.sqrt(Math.pow(distanceX, 2) + Math.pow(distanceY, 2) + Math.pow(distanceZ, 2));
+      var distanceX = (aX / 6) * Math.pow(dt, 3);
+      var distanceY = (aY / 6) * Math.pow(dt, 3);
+      var distanceZ = (aZ / 6) * Math.pow(dt, 3);
+      totalDistance += Math.sqrt(Math.pow(distanceX, 2) + Math.pow(distanceY, 2) + Math.pow(distanceZ, 2));
 
-        dataCSV += `${new Date().toISOString()},${aX.toFixed(3)},${aY.toFixed(3)},${aZ.toFixed(3)},${totalDistance.toFixed(3)}\n`;
+      dataCSV += `${new Date().toISOString()},${aX.toFixed(10)},${aY.toFixed(10)},${aZ.toFixed(10)},${totalDistance.toFixed(10)},${quaternion.w.toFixed(10)},${quaternion.x.toFixed(10)},${quaternion.y.toFixed(10)},${quaternion.z.toFixed(10)}\n`;
 
-        var accelerometerData = document.getElementById('accelerometer-data');
-        accelerometerData.innerHTML = `Acceleration X: ${aX.toFixed(3)}, Acceleration Y: ${aY.toFixed(3)}, Acceleration Z: ${aZ.toFixed(3)}, Distance: ${totalDistance.toFixed(3)}`;
+      var sensorData = document.getElementById('sensor-data');
+      sensorData.innerHTML = `Accel X: ${aX.toFixed(10)}, Accel Y: ${aY.toFixed(10)}, Accel Z: ${aZ.toFixed(10)}, Distance: ${totalDistance.toFixed(10)}, Quaternion: [${quaternion.w.toFixed(10)}, ${quaternion.x.toFixed(10)}, ${quaternion.y.toFixed(10)}, ${quaternion.z.toFixed(10)}]`;
 
-        lastTime = currentTime;
-      } catch (error) {
-        console.error("Error processing accelerometer data:", error);
-      }
+      lastTime = currentTime;
+    }
+
+    function orientationUpdate(event) {
+      var alpha = event.alpha * (Math.PI / 180);
+      var beta = event.beta * (Math.PI / 180);
+      var gamma = event.gamma * (Math.PI / 180);
+
+      // Convert Euler angles (alpha, beta, gamma) to quaternion
+      var c1 = Math.cos(alpha / 2);
+      var c2 = Math.cos(beta / 2);
+      var c3 = Math.cos(gamma / 2);
+      var s1 = Math.sin(alpha / 2);
+      var s2 = Math.sin(beta / 2);
+      var s3 = Math.sin(gamma / 2);
+
+      quaternion.w = c1 * c2 * c3 + s1 * s2 * s3;
+      quaternion.x = s1 * c2 * c3 - c1 * s2 * s3;
+      quaternion.y = c1 * s2 * c3 + s1 * c2 * s3;
+      quaternion.z = c1 * c2 * s3 - s1 * s2 * c3;
     }
 
     function filterData(value) {
@@ -82,7 +98,7 @@
       var url = URL.createObjectURL(blob);
       var link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", "accelerometer_data.csv");
+      link.setAttribute("download", "sensor_data.csv");
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
