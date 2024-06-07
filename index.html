@@ -1,109 +1,75 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sensor Data</title>
-  <style>
-    #sensor-data {
-      position: absolute;
-      top: 10%;
-      left: 10%;
-      font-size: 16px;
-      font-weight: bold;
-      color: #333;
-    }
-    #download {
-      position: absolute;
-      top: 15%;
-      left: 10%;
-      font-size: 18px;
-      cursor: pointer;
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 20px;
-      text-align: center;
-      text-decoration: none;
-      display: inline-block;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Accelerometer and Gyroscope Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+    </style>
 </head>
 <body>
-  <div id="sensor-data"></div>
-  <button id="download" onclick="downloadCSV()">Download Data</button>
-  <script>
-    if (window.DeviceMotionEvent === undefined || window.DeviceOrientationEvent === undefined) {
-      alert("Necessary sensors not available.");
-    } else {
-      window.addEventListener("devicemotion", motionUpdate, true);
-      window.addEventListener("deviceorientation", orientationUpdate, true);
-      alert("Sensors found.");
-    }
+    <h1>Accelerometer and Gyroscope Data</h1>
+    <p id="accelerometer-data"></p>
+    <p id="gyroscope-data"></p>
+    <button id="download-button">Download Data</button>
 
-    var dataCSV = "Time,Accel X,Accel Y,Accel Z,Distance,Quat W,Quat X,Quat Y,Quat Z\n";
-    var lastTime = performance.now();
-    var totalDistance = 0;
-    var quaternion = { w: 1, x: 0, y: 0, z: 0 };
+    <script>
+        // Get the elements to display the data
+        const accelerometerDataElement = document.getElementById('accelerometer-data');
+        const gyroscopeDataElement = document.getElementById('gyroscope-data');
+        const downloadButton = document.getElementById('download-button');
 
-    function motionUpdate(event) {
-      var currentTime = performance.now();
-      var dt = (currentTime - lastTime) / 1000;
+        // Function to handle accelerometer data
+        function handleAccelerometerData(event) {
+            const acceleration = event.accelerationIncludingGravity;
+            const accelerationX = acceleration.x;
+            const accelerationY = acceleration.y;
+            const accelerationZ = acceleration.z;
 
-      var aX = event.accelerationIncludingGravity.x * 1;
-      var aY = event.accelerationIncludingGravity.y * 1;
-      var aZ = event.accelerationIncludingGravity.z * 1;
+            // Display the data
+            accelerometerDataElement.innerHTML = `Acceleration: X = ${accelerationX}, Y = ${accelerationY}, Z = ${accelerationZ}`;
+        }
 
-      aX = filterData(aX);
-      aY = filterData(aY);
-      aZ = filterData(aZ);
+        // Function to handle gyroscope data
+        function handleGyroscopeData(event) {
+            const rotationRate = event.rotationRate;
+            const rotationRateX = rotationRate.alpha;
+            const rotationRateY = rotationRate.beta;
+            const rotationRateZ = rotationRate.gamma;
 
-      var distanceX = (aX / 6) * Math.pow(dt, 3);
-      var distanceY = (aY / 6) * Math.pow(dt, 3);
-      var distanceZ = (aZ / 6) * Math.pow(dt, 3);
-      totalDistance += Math.sqrt(Math.pow(distanceX, 2) + Math.pow(distanceY, 2) + Math.pow(distanceZ, 2));
+            // Display the data
+            gyroscopeDataElement.innerHTML = `Gyroscope: X = ${rotationRateX}, Y = ${rotationRateY}, Z = ${rotationRateZ}`;
+        }
 
-      dataCSV += `${new Date().toISOString()},${aX.toFixed(10)},${aY.toFixed(10)},${aZ.toFixed(10)},${totalDistance.toFixed(10)},${quaternion.w.toFixed(10)},${quaternion.x.toFixed(10)},${quaternion.y.toFixed(10)},${quaternion.z.toFixed(10)}\n`;
+        // Function to generate the CSV string
+        function generateCsvString() {
+            const csvString = 'Acceleration X,Y,Z,Gyroscope X,Y,Z\n';
+            // Add the data to the CSV string
+            const accelerometerData = [...]; // Get the accelerometer data
+            const gyroscopeData = [...]; // Get the gyroscope data
+            for (let i = 0; i < accelerometerData.length; i++) {
+                csvString += `${accelerationData[i][0]},${accelerationData[i][1]},${accelerationData[i][2]},${gyroscopeData[i][0]},${gyroscopeData[i][1]},${gyroscopeData[i][2]}\n`;
+            }
+            return csvString;
+        }
 
-      var sensorData = document.getElementById('sensor-data');
-      sensorData.innerHTML = `Accel X: ${aX.toFixed(10)}, Accel Y: ${aY.toFixed(10)}, Accel Z: ${aZ.toFixed(10)}, Distance: ${totalDistance.toFixed(10)}, Quaternion: [${quaternion.w.toFixed(10)}, ${quaternion.x.toFixed(10)}, ${quaternion.y.toFixed(10)}, ${quaternion.z.toFixed(10)}]`;
+        // Function to create a download link for the CSV file
+        function createDownloadLink() {
+            const csvString = generateCsvString();
+            const link = document.createElement('a');
+            link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvString);
+            link.download = 'accelerometer_and_gyroscope_data.csv';
+            link.click();
+        }
 
-      lastTime = currentTime;
-    }
+        // Add event listeners for accelerometer and gyroscope data
+        window.addEventListener('devicemotion', handleAccelerometerData);
+        window.addEventListener('deviceorientation', handleGyroscopeData);
 
-    function orientationUpdate(event) {
-      var alpha = event.alpha * (Math.PI / 180);
-      var beta = event.beta * (Math.PI / 180);
-      var gamma = event.gamma * (Math.PI / 180);
-
-      // Convert Euler angles (alpha, beta, gamma) to quaternion
-      var c1 = Math.cos(alpha / 2);
-      var c2 = Math.cos(beta / 2);
-      var c3 = Math.cos(gamma / 2);
-      var s1 = Math.sin(alpha / 2);
-      var s2 = Math.sin(beta / 2);
-      var s3 = Math.sin(gamma / 2);
-
-      quaternion.w = c1 * c2 * c3 + s1 * s2 * s3;
-      quaternion.x = s1 * c2 * c3 - c1 * s2 * s3;
-      quaternion.y = c1 * s2 * c3 + s1 * c2 * s3;
-      quaternion.z = c1 * c2 * s3 - s1 * s2 * c3;
-    }
-
-    function filterData(value) {
-      return value * 0.9 + (value - value * 0.9) * 0.1;
-    }
-
-    function downloadCSV() {
-      var blob = new Blob([dataCSV], { type: 'text/csv;charset=utf-8;' });
-      var url = URL.createObjectURL(blob);
-      var link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", "sensor_data.csv");
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  </script>
+        // Add event listener for the download button
+        downloadButton.addEventListener('click', createDownloadLink);
+    </script>
 </body>
 </html>
